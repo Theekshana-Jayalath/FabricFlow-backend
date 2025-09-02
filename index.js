@@ -29,6 +29,7 @@ connection.once("open", () => {
 
 // Routes
 app.use('/api/orders', orderRoutes);
+app.use('/api/drivers/',driverRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
