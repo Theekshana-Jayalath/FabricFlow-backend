@@ -83,5 +83,32 @@ export async function getDriverById(req, res) {
   }
 }
 
+export async function deleteDriverById(req, res) {
+  try {
+
+    const driverId = req.params.driverId; 
+    const driver = await Driver.deleteOne({driverId : driverId});
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Driver deleted successfully",
+      data: driver, // returning deleted driver info
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting driver",
+      error: error.message,
+    });
+  }
+}
+
 
 
