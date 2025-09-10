@@ -8,6 +8,4 @@ driverRouter.get("/allDrivers",getAllDrivers)
 driverRouter.get("/:id",getDriverById)
 driverRouter.delete("/:id",deleteDriverById)
 driverRouter.put("/:id",updateDriverById)
-
-
 export default driverRouter;
