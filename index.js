@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from 'cors';
 import orderRoutes from './routes/orderRoute.js';
 import driverRouter from './routes/driverRoutes.js';
+import distributionRoutes from './routes/distributionRoutes.js';
   
 dotenv.config()
 const app = express();
@@ -35,6 +36,7 @@ import authRouter from './Route/AuthRoute.js';
 
 app.use('/api/orders', orderRoutes);
 app.use('/api/drivers/', driverRouter);
+app.use('/api/distributions', distributionRoutes);
 app.use("/users", userRouter); // all user routes
 app.use("/employees", employeeRouter);
 app.use("/auth", authRouter); // authentication routes
