@@ -10,8 +10,4 @@ driverRouter.delete("/:id",deleteDriverById)
 driverRouter.put("/:id",updateDriverById)
 
 
-
-
-
-
 export default driverRouter;
