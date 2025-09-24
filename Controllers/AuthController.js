@@ -5,12 +5,67 @@ import Employee from '../Model/EmployeeModel.js';
 import PasswordReset from '../Model/PasswordResetModel.js';
 import { generateVerificationCode, sendVerificationEmail, sendPasswordResetConfirmation } from '../utils/emailService.js';
 
+// Enhanced password validation function
+const validatePassword = (password) => {
+  const errors = [];
+  
+  if (!password) {
+    return { isValid: false, message: 'Password is required' };
+  }
+  
+  if (password.length < 8) {
+    errors.push('Minimum length: 8 characters');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('At least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('At least one lowercase letter');
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    errors.push('At least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('At least one special character');
+  }
+  
+  // Common passwords check
+  const commonPasswords = [
+    'password', 'password123', '123456', '123456789', 'qwerty',
+    'abc123', 'password1', '12345678', 'welcome', 'admin',
+    'letmein', 'monkey', '1234567890', 'sunshine', 'master'
+  ];
+  
+  if (commonPasswords.includes(password.toLowerCase())) {
+    errors.push('Avoid common passwords');
+  }
+  
+  if (errors.length > 0) {
+    return { isValid: false, message: `Password requirements: ${errors.join(', ')}` };
+  }
+  
+  return { isValid: true, message: 'Password meets all requirements' };
+};
+
 // Register user, employee, or admin
 const register = async (req, res) => {
   try {
     const { role, password, ...userData } = req.body;
     
     console.log('Registration attempt:', { role, userData });
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: passwordValidation.message
+      });
+    }
 
     // Hash password
     const saltRounds = 10;
@@ -779,10 +834,19 @@ const manualChangePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'New password must be at least 6 characters long'
+        message: 'New password must be at least 8 characters long'
+      });
+    }
+
+    // Enhanced password validation
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: passwordValidation.message
       });
     }
 
