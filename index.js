@@ -5,6 +5,7 @@ import cors from 'cors';
 import orderRoutes from './routes/orderRoute.js';
 import distributionRoutes from './routes/distributionRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
+import driverRoutes from './routes/driverRoutes.js';
 import userRouter from './Route/UserRoute.js';
 import employeeRouter from './Route/EmployeeRoute.js';
 import authRouter from './Route/AuthRoute.js';
@@ -42,6 +43,7 @@ connection.once("open", () => {
 app.use('/api/orders', orderRoutes);
 app.use('/api/distributions', distributionRoutes);
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/drivers', driverRoutes);
 app.use("/users", userRouter); // all user routes
 app.use("/employees", employeeRouter);
 app.use("/auth", authRouter); // authentication routes
