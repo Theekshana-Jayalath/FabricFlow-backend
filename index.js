@@ -3,8 +3,13 @@ import mongoose from 'mongoose';
 import dotenv from "dotenv";
 import cors from 'cors';
 import orderRoutes from './routes/orderRoute.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 const app = express();
 
 // Middleware
@@ -15,10 +20,12 @@ app.use(express.urlencoded({ extended: true }));
 // MongoDB Connection
 const mongoUrl = process.env.MONGO_DB_URI;
 
-mongoose.connect(mongoUrl, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+if (!mongoUrl) {
+    console.error("MONGO_DB_URI is not defined in environment variables");
+    process.exit(1);
+}
+
+mongoose.connect(mongoUrl);
 
 const connection = mongoose.connection;
 

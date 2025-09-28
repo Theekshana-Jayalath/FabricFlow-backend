@@ -135,6 +135,9 @@ export const updateOrder = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
+        console.log('Updating order:', id);
+        console.log('Update data:', updates);
+
         // Find the order first
         const order = await Order.findOne({ orderId: id });
         if (!order) {
@@ -172,14 +175,50 @@ export const updateOrder = async (req, res) => {
             });
         }
 
+        // Handle nested customer updates properly
+        if (updates.customer) {
+            // Merge with existing customer data to avoid overwriting required fields
+            updates.customer = {
+                ...order.customer.toObject(),
+                ...updates.customer
+            };
+
+            // Handle shipping address merge
+            if (updates.customer.shippingAddress) {
+                updates.customer.shippingAddress = {
+                    ...order.customer.shippingAddress.toObject(),
+                    ...updates.customer.shippingAddress
+                };
+            }
+        }
+
+        // Remove empty string values to prevent validation errors
+        const cleanUpdates = {};
+        Object.keys(updates).forEach(key => {
+            if (updates[key] !== '' && updates[key] !== null && updates[key] !== undefined) {
+                cleanUpdates[key] = updates[key];
+            }
+        });
+
+        console.log('Clean updates:', cleanUpdates);
+
         const updatedOrder = await Order.findOneAndUpdate(
             { orderId: id },
-            { $set: updates },
-            { new: true, runValidators: true }
+            { $set: cleanUpdates },
+            { 
+                new: true, 
+                runValidators: true,
+                context: 'query' // This helps with validation context
+            }
         );
+
+        if (!updatedOrder) {
+            return res.status(404).json({ message: 'Order not found during update' });
+        }
 
         res.status(200).json(updatedOrder);
     } catch (error) {
+        console.error('Update error:', error);
         res.status(400).json({ message: error.message });
     }
 };
