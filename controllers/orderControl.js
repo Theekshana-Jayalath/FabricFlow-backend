@@ -1,8 +1,13 @@
 import Order from '../models/orderModel.js';
 
-// Create a new order
-// ...existing code...
+// Helper function to calculate delivery date
+const calculateDeliveryDate = (orderDate) => {
+    const date = new Date(orderDate);
+    date.setDate(date.getDate() + 7);
+    return date;
+};
 
+// Create a new order
 export const createOrder = async (req, res) => {
     try {
         const orderData = req.body;
@@ -10,7 +15,15 @@ export const createOrder = async (req, res) => {
         // Check if the input is an array
         if (Array.isArray(orderData)) {
             // Handle bulk creation
-            const orders = await Order.insertMany(orderData);
+            const processedOrders = orderData.map(order => {
+                // Set delivery date if not provided
+                if (!order.deliveryDate && order.orderDate) {
+                    order.deliveryDate = calculateDeliveryDate(order.orderDate);
+                }
+                return order;
+            });
+            
+            const orders = await Order.insertMany(processedOrders);
             res.status(201).json({
                 success: true,
                 message: 'Orders created successfully',
@@ -18,6 +31,11 @@ export const createOrder = async (req, res) => {
             });
         } else {
             // Handle single order creation
+            // Set delivery date if not provided
+            if (!orderData.deliveryDate && orderData.orderDate) {
+                orderData.deliveryDate = calculateDeliveryDate(orderData.orderDate);
+            }
+            
             const order = new Order(orderData);
             await order.save();
             res.status(201).json({
@@ -34,11 +52,12 @@ export const createOrder = async (req, res) => {
     }
 };
 
-// ...existing code...
-
-// Get all orders with filtering options
+// Get all orders with filtering options and auto-update expired orders
 export const getOrders = async (req, res) => {
     try {
+        // Auto-update expired orders before fetching
+        await Order.updateExpiredOrders();
+        
         const {
             customer,
             startDate,
@@ -76,13 +95,17 @@ export const getOrders = async (req, res) => {
     }
 };
 
-// Get a single order by ID
+// Get a single order by ID and auto-complete if eligible
 export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.id });
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
+        
+        // Check if order should be auto-completed
+        await order.autoCompleteIfEligible();
+        
         res.status(200).json(order);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -94,6 +117,12 @@ export const getCustomerOrders = async (req, res) => {
     try {
         const orders = await Order.find({ 'customer.email': req.params.email })
             .sort({ orderDate: -1 });
+            
+        // Auto-complete eligible orders
+        for (let order of orders) {
+            await order.autoCompleteIfEligible();
+        }
+        
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -106,10 +135,21 @@ export const updateOrder = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
+        console.log('Updating order:', id);
+        console.log('Update data:', updates);
+
         // Find the order first
         const order = await Order.findOne({ orderId: id });
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check if order should be auto-completed first
+        await order.autoCompleteIfEligible();
+
+        // If order date is being updated, recalculate delivery date
+        if (updates.orderDate) {
+            updates.deliveryDate = calculateDeliveryDate(updates.orderDate);
         }
 
         // Check if order can be updated based on its status
@@ -135,14 +175,50 @@ export const updateOrder = async (req, res) => {
             });
         }
 
+        // Handle nested customer updates properly
+        if (updates.customer) {
+            // Merge with existing customer data to avoid overwriting required fields
+            updates.customer = {
+                ...order.customer.toObject(),
+                ...updates.customer
+            };
+
+            // Handle shipping address merge
+            if (updates.customer.shippingAddress) {
+                updates.customer.shippingAddress = {
+                    ...order.customer.shippingAddress.toObject(),
+                    ...updates.customer.shippingAddress
+                };
+            }
+        }
+
+        // Remove empty string values to prevent validation errors
+        const cleanUpdates = {};
+        Object.keys(updates).forEach(key => {
+            if (updates[key] !== '' && updates[key] !== null && updates[key] !== undefined) {
+                cleanUpdates[key] = updates[key];
+            }
+        });
+
+        console.log('Clean updates:', cleanUpdates);
+
         const updatedOrder = await Order.findOneAndUpdate(
             { orderId: id },
-            { $set: updates },
-            { new: true, runValidators: true }
+            { $set: cleanUpdates },
+            { 
+                new: true, 
+                runValidators: true,
+                context: 'query' // This helps with validation context
+            }
         );
+
+        if (!updatedOrder) {
+            return res.status(404).json({ message: 'Order not found during update' });
+        }
 
         res.status(200).json(updatedOrder);
     } catch (error) {
+        console.error('Update error:', error);
         res.status(400).json({ message: error.message });
     }
 };
@@ -182,10 +258,13 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        // Check if order should be auto-completed first
+        await order.autoCompleteIfEligible();
+
         // Validate status transition
         const validTransitions = {
-            'PENDING': ['PROCESSING', 'CANCELLED'],
-            'PROCESSING': ['SHIPPED', 'CANCELLED'],
+            'PROCESSING': ['COMPLETED', 'CANCELLED', 'SHIPPED'],
+            'COMPLETED': ['SHIPPED'],
             'SHIPPED': ['DELIVERED'],
             'DELIVERED': [],
             'CANCELLED': []
@@ -198,6 +277,7 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         order.orderStatus = status;
+        order.statusUpdateDate = new Date();
         await order.save();
 
         res.status(200).json(order);
@@ -225,5 +305,22 @@ export const updatePaymentStatus = async (req, res) => {
         res.status(200).json(order);
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+// Manually trigger order status updates (can be called by a cron job)
+export const updateExpiredOrders = async (req, res) => {
+    try {
+        const result = await Order.updateExpiredOrders();
+        res.status(200).json({
+            success: true,
+            message: `Updated ${result.modifiedCount} orders to COMPLETED status`,
+            data: result
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };

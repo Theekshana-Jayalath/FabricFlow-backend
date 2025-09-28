@@ -17,10 +17,12 @@ app.use(express.urlencoded({ extended: true }));
 // MongoDB Connection
 const mongoUrl = process.env.MONGO_DB_URI;
 
-mongoose.connect(mongoUrl, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+if (!mongoUrl) {
+    console.error("MONGO_DB_URI is not defined in environment variables");
+    process.exit(1);
+}
+
+mongoose.connect(mongoUrl);
 
 const connection = mongoose.connection;
 
