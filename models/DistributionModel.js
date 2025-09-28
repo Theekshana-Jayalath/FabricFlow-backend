@@ -15,7 +15,7 @@ const distributionSchema = new Schema(
     },
     driver: {
       type: Schema.Types.ObjectId,
-      ref: "Driver",
+      ref: "EmployeeModel", // Changed from "Driver" to "EmployeeModel"
       required: true,
     },
     assignedBy: {

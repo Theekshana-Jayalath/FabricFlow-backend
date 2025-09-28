@@ -7,6 +7,9 @@ const router = express.Router();
 // Get all employees
 router.get("/", employeeController.getAllEmployees);
 
+// Get all drivers from employees (role: employee, jobPosition: driver)
+router.get("/drivers", employeeController.getAllDrivers);
+
 // Add new employee
 router.post("/", employeeController.addEmployee);
 
