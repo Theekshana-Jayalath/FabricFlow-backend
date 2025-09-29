@@ -194,10 +194,78 @@ const deleteEmployee = async (req, res) => {
   }
 };
 
+// ✅ Get all drivers from employees
+const getAllDrivers = async (req, res) => {
+  try {
+    const { availableOnly } = req.query; // Add query parameter for filtering
+    
+    // Base query: Find employees where role is "employee" and jobPosition is "Driver"
+    let query = {
+      role: "employee",
+      jobPosition: { $regex: /^driver$/i }
+    };
+    
+    // If availableOnly is requested, filter by active status
+    if (availableOnly === 'true') {
+      query.status = "active";
+    }
+    
+    const drivers = await Employee.find(query).select('-password');
+
+    if (!drivers || drivers.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: availableOnly === 'true' ? "No available drivers found" : "No drivers found in employees"
+      });
+    }
+
+    // If availableOnly is requested, also check for busy drivers
+    let result = drivers;
+    let additionalInfo = {};
+    
+    if (availableOnly === 'true') {
+      // Import Distribution model at the top of the file if not already imported
+      const { default: Distribution } = await import('../models/DistributionModel.js');
+      
+      const busyDriverIds = await Distribution.find({ 
+        deliveryStatus: { $in: ['ASSIGNED', 'IN_TRANSIT'] } 
+      }).distinct('driver');
+
+      const freeDrivers = drivers.filter(driver => 
+        !busyDriverIds.some(busyId => busyId.toString() === driver._id.toString())
+      );
+      
+      result = freeDrivers;
+      additionalInfo = {
+        totalActiveDrivers: drivers.length,
+        freeDriversCount: freeDrivers.length,
+        busyDriversCount: drivers.length - freeDrivers.length
+      };
+    }
+
+    console.log(`Found ${result.length} drivers in employees collection`);
+    
+    return res.status(200).json({ 
+      success: true,
+      count: result.length,
+      drivers: result,
+      ...additionalInfo
+    });
+  } catch (err) {
+    console.error('Error fetching drivers from employees:', err);
+    return res.status(500).json({ 
+      success: false,
+      message: "Server error while fetching drivers", 
+      error: err.message 
+    });
+  }
+};
+
 export default {
   getAllEmployees,
   addEmployee,
   getEmployeeById,
   updateEmployee,
   deleteEmployee,
+  getAllDrivers,
 };
