@@ -38,7 +38,7 @@ const createVehicle = async (req, res) => {
         const savedVehicle = await vehicle.save();
         
         // Populate driver info if assigned
-        await savedVehicle.populate('assignedDriverId', 'name email phone');
+        await savedVehicle.populate('assignedDriverId', 'empName empPhone emailAddress empId');
 
         res.status(201).json({
             success: true,
@@ -70,7 +70,7 @@ const getAllVehicles = async (req, res) => {
 
         // Get vehicles with pagination
         const vehicles = await Vehicle.find(filter)
-            .populate('assignedDriverId', 'name email phone')
+            .populate('assignedDriverId', 'empName empPhone emailAddress empId')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit));
@@ -106,7 +106,7 @@ const getVehicleById = async (req, res) => {
         const { id } = req.params;
 
         const vehicle = await Vehicle.findById(id)
-            .populate('assignedDriverId', 'name email phone licenseNumber');
+            .populate('assignedDriverId', 'empName empPhone emailAddress empId');
 
         if (!vehicle) {
             return res.status(404).json({
@@ -165,7 +165,7 @@ const updateVehicle = async (req, res) => {
             id,
             updateData,
             { new: true, runValidators: true }
-        ).populate('assignedDriverId', 'name email phone');
+        ).populate('assignedDriverId', 'empName empPhone emailAddress empId');
 
         res.status(200).json({
             success: true,
@@ -254,7 +254,7 @@ const assignDriver = async (req, res) => {
             id,
             { assignedDriverId: driverId },
             { new: true, runValidators: true }
-        ).populate('assignedDriverId', 'name email phone');
+        ).populate('assignedDriverId', 'empName empPhone emailAddress empId');
 
         res.status(200).json({
             success: true,

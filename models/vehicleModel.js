@@ -43,7 +43,7 @@ const vehicleSchema = new mongoose.Schema({
     },
     assignedDriverId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Driver',
+        ref: 'EmployeeModel',
         default: null
     }
 }, {
