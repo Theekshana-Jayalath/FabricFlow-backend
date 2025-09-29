@@ -9,6 +9,8 @@ import driverRoutes from './routes/driverRoutes.js';
 import userRouter from './Route/UserRoute.js';
 import employeeRouter from './Route/EmployeeRoute.js';
 import authRouter from './Route/AuthRoute.js';
+import ExpenseRoutes from "./routes/ExpensesRoutes.js";
+import PayrollRoutes from "./routes/payrollRoutes.js";
   
 dotenv.config()
 const app = express();
@@ -47,6 +49,10 @@ app.use('/api/drivers', driverRoutes);
 app.use("/users", userRouter); // all user routes
 app.use("/employees", employeeRouter);
 app.use("/auth", authRouter); // authentication routes
+
+
+app.use("/api/expenses", ExpenseRoutes);
+app.use("/api/payrolls", PayrollRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
