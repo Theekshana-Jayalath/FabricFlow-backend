@@ -50,7 +50,6 @@ const vehicleSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for better query performance
 vehicleSchema.index({ registrationNumber: 1 });
 vehicleSchema.index({ status: 1 });
 vehicleSchema.index({ assignedDriverId: 1 });

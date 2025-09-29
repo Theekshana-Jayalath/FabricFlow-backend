@@ -1,4 +1,5 @@
 import Employee from '../Model/EmployeeModel.js';
+import mongoose from 'mongoose';
 
 // Get all drivers (employees with driver job position)
 const getAllDrivers = async (req, res) => {
@@ -34,6 +35,14 @@ const getAllDrivers = async (req, res) => {
 const getDriverById = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Validate if the ID is a valid MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid driver ID format'
+            });
+        }
 
         const driver = await Employee.findById(id).select('-password -__v');
 
