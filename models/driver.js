@@ -48,7 +48,7 @@ const driverSchema = mongoose.Schema(
       default: 0,
     },
     vehicleAssigned: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Vehicle", 
       default: null,
     },
