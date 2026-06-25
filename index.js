@@ -20,7 +20,9 @@ const mongoUrl = process.env.MONGO_DB_URI
 
 mongoose.connect(mongoUrl).then(()=>{
     console.log("Database Connected!!");
-})
+}).catch((err) => {
+    console.error("Database connection error:", err);
+});
 
 app.use('/auth', authRoutes);
 app.use('/users', userRouter);
@@ -31,6 +33,7 @@ app.use('/api/orders', orderRoute);
 app.use('/api/vehicles', vehicleRoute);
 app.use('/api/distributions', distributionRoute);
 
-app.listen(5000,() =>{
-    console.log('Server is running on port 5000')
-})
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>{
+    console.log(`Server is running on port ${PORT}`);
+});
